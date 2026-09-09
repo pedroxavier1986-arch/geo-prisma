@@ -82,7 +82,7 @@ export default function Home() {
 
  return <div className="app-shell">
   <header className="topbar"><div className="topbar-inner">
-   <a className="product-brand" href="/" aria-label="Geo Prisma, início"><span className="product-icon"><MapPin size={21} strokeWidth={1.8}/></span><span>Geo Prisma</span></a>
+   <a className="product-brand" href="/" aria-label="Geo Prisma, início"><img className="product-icon" src="/logo-mark.png" alt="" width="36" height="36"/><span>Geo Prisma</span></a>
    <div className="brand-signature"><span>por</span><span className="analitx-crop"><img src="/analitx-original.png" alt="ANALITX" width="174" height="174"/></span></div>
   </div></header>
   <main>
