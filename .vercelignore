@@ -1,0 +1,7 @@
+supabase/
+tests/
+*.tmp.md
+AGENTS.md
+CLAUDE.md
+*.tsbuildinfo
+.env*
