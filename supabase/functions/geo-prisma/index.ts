@@ -22,7 +22,7 @@ async function worker() {
     let match = cached;
     if (!match) {
      const url = new URL(Deno.env.get('PHOTON_URL') || 'https://photon.komoot.io/api/');
-     url.searchParams.set('q', `${task.address}, ${task.cep.slice(0,5)}-${task.cep.slice(5)}, ${task.city}, Brazil`);
+     url.searchParams.set('q', `${task.address}, ${task.number}, ${task.cep.slice(0,5)}-${task.cep.slice(5)}, ${task.city}, Brazil`);
      url.searchParams.set('limit', '5'); url.searchParams.set('lang','en');
      const response = await fetch(url, { headers: { 'User-Agent': 'GeoPrisma-Analitx/1.0' }, signal: AbortSignal.timeout(8000) });
      if (!response.ok) throw new Error(`Serviço temporariamente indisponível (${response.status})`);
@@ -30,7 +30,7 @@ async function worker() {
      const feature = data.features?.find((f: { properties?: Record<string,string>; geometry?: { coordinates?: number[] } }) => {
       const p = f.properties || {}, c = f.geometry?.coordinates;
       const postcode = (p.postcode || p.name || '').replace(/\D/g,'');
-      const addressTokens = norm(task.address).split(/[^a-z0-9]+/).filter(v => v.length > 2);
+      const addressTokens = norm(`${task.address} ${task.number}`).split(/[^a-z0-9]+/).filter(v => v.length > 2);
       const resultText = norm([p.name,p.street,p.locality,p.district].filter(Boolean).join(' '));
       const addressMatch = addressTokens.length === 0 || addressTokens.filter(token => resultText.includes(token)).length >= Math.min(2, addressTokens.length);
       return p.countrycode?.toUpperCase() === 'BR' &&
@@ -92,8 +92,8 @@ Deno.serve(async req => {
   if (body.action === 'start') {
    if (!Array.isArray(body.places) || !body.places.length || body.places.length>3000) return send({error:'Use entre 1 e 3.000 localidades.'},400);
    const places = body.places.map((p: Record<string,unknown>) => {
-    if (!p || typeof p.cep!=='string' || !/^\d{8}$/.test(p.cep) || typeof p.city!=='string' || !p.city.trim() || p.city.length>120 || typeof p.address!=='string' || !p.address.trim() || p.address.length>240) throw new Error('invalid_places');
-    const city = p.city.trim().replace(/\s+/g,' '), address = p.address.trim().replace(/\s+/g,' '); return {cep:p.cep,city,address,key:`${p.cep}|${norm(city)}|${norm(address)}`};
+    if (!p || typeof p.cep!=='string' || !/^\d{8}$/.test(p.cep) || typeof p.city!=='string' || !p.city.trim() || p.city.length>120 || typeof p.address!=='string' || !p.address.trim() || p.address.length>240 || typeof p.number!=='string' || !p.number.trim() || p.number.length>30) throw new Error('invalid_places');
+    const city = p.city.trim().replace(/\s+/g,' '), address = p.address.trim().replace(/\s+/g,' '), number = p.number.trim().replace(/\s+/g,' '); return {cep:p.cep,city,address,number,key:`${p.cep}|${norm(city)}|${norm(address)}|${norm(number)}`};
    });
    const exists = must(await db.storage.from('geo-prisma').exists(job.path));
    if (!exists) return send({error:'O upload ainda não foi concluído.'},409);

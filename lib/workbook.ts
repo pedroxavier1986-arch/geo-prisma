@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 
-export type Place = { key: string; cep: string; city: string; address: string };
-export type PreviewRow = { row: number; name: string; address: string; cep: string; city: string; latitude: number | null; longitude: number | null; key: string; issue?: string };
+export type Place = { key: string; cep: string; city: string; address: string; number: string };
+export type PreviewRow = { row: number; name: string; address: string; number: string; cep: string; city: string; latitude: number | null; longitude: number | null; key: string; issue?: string };
 export type Inspection = { workbook: ExcelJS.Workbook; sheet: ExcelJS.Worksheet; columns: Record<string, number>; rows: PreviewRow[]; places: Place[]; total: number; pending: number; existing: number; invalid: number };
 export type GeoResult = { key: string; latitude: number | null; longitude: number | null; status: string; provider?: string; reason?: string };
 
@@ -50,7 +50,8 @@ export async function inspectWorkbook(data: ArrayBuffer): Promise<Inspection> {
  });
  if (!columns.cep && columns.postcode) columns.cep = columns.postcode;
  if (!columns.address) columns.address = columns.endereco || columns['endereço'] || columns.street || columns.logradouro;
- const missing = ['address', 'cep', 'city', 'latitude', 'longitude'].filter(k => !columns[k]);
+ if (!columns.number) columns.number = columns.numero || columns['número'] || columns.house_number;
+ const missing = ['address', 'number', 'cep', 'city', 'latitude', 'longitude'].filter(k => !columns[k]);
  if (missing.length) throw new Error(`Faltam colunas na aba Base: ${missing.join(', ')}.`);
  const rows: PreviewRow[] = [];
  const places = new Map<string, Place>();
@@ -60,14 +61,15 @@ export async function inspectWorkbook(data: ArrayBuffer): Promise<Inspection> {
   const cep = normalizeCep(row.getCell(columns.cep).text);
   const city = row.getCell(columns.city).text.trim().replace(/\s+/g, ' ');
   const address = row.getCell(columns.address).text.trim().replace(/\s+/g, ' ');
+  const number = row.getCell(columns.number).text.trim().replace(/\s+/g, ' ');
   const latitude = coordinate(row.getCell(columns.latitude).text, 90);
   const longitude = coordinate(row.getCell(columns.longitude).text, 180);
-  const key = placeKey(cep, city, address);
+  const key = placeKey(cep, city, `${address} ${number}`);
   const complete = latitude !== null && longitude !== null;
-  const issue = !complete && (!cep || !city || !address) ? (!cep ? 'CEP inválido ou ausente' : !city ? 'Cidade ausente' : 'Endereço ausente') : undefined;
-  if (complete) existing++; else { pending++; if (issue) invalid++; else places.set(key, { key, cep, city, address }); }
+  const issue = !complete && (!cep || !city || !address || !number) ? (!cep ? 'CEP inválido ou ausente' : !city ? 'Cidade ausente' : !address ? 'Endereço ausente' : 'Número ausente') : undefined;
+  if (complete) existing++; else { pending++; if (issue) invalid++; else places.set(key, { key, cep, city, address, number }); }
   const nameColumn = columns.name || columns.nome;
-  rows.push({ row: i, name: nameColumn ? row.getCell(nameColumn).text : `Registro ${i - 1}`, address, cep: cep || row.getCell(columns.cep).text, city, latitude, longitude, key, issue });
+  rows.push({ row: i, name: nameColumn ? row.getCell(nameColumn).text : `Registro ${i - 1}`, address, number, cep: cep || row.getCell(columns.cep).text, city, latitude, longitude, key, issue });
  });
  if (!rows.length) throw new Error('A aba Base está vazia. Inclua os endereços a partir da segunda linha.');
  if (places.size > 3000) throw new Error('Esta versão aceita até 3.000 localidades únicas. Divida a planilha em arquivos menores.');
@@ -104,9 +106,9 @@ export async function exportWorkbook(inspection: Inspection, results: GeoResult[
 export async function templateWorkbook() {
  const workbook = new ExcelJS.Workbook();
  const sheet = workbook.addWorksheet('Base');
- sheet.columns = ['name', 'address', 'cep', 'city', 'latitude', 'longitude'].map(key => ({ header: key, key, width: key === 'name' ? 30 : key === 'address' ? 42 : 20 }));
+ sheet.columns = ['name', 'address', 'number', 'cep', 'city', 'latitude', 'longitude'].map(key => ({ header: key, key, width: key === 'name' ? 30 : key === 'address' ? 42 : 20 }));
  sheet.getColumn('cep').numFmt = '@';
- sheet.addRow({ name: 'Estabelecimento de exemplo', address: 'Avenida Paulista, 1000', cep: '01311100', city: 'São Paulo' });
+ sheet.addRow({ name: 'Estabelecimento de exemplo', address: 'Avenida Paulista', number: '1000', cep: '01311100', city: 'São Paulo' });
  sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
  sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0066FF' } };
  sheet.views = [{ state: 'frozen', ySplit: 1 }];

@@ -24,6 +24,7 @@ create table public.gp_tasks (
 );
 create index gp_tasks_pending on public.gp_tasks(status,next_at);
 alter table public.gp_tasks add column if not exists address text;
+alter table public.gp_tasks add column if not exists number text;
 create table public.gp_cache (
  key text primary key, latitude double precision not null, longitude double precision not null,
  provider text not null, created_at timestamptz not null default now()
@@ -65,8 +66,8 @@ begin
  if not found then raise exception 'Arquivo não encontrado.'; end if;
  if j.status<>'uploading' then return; end if;
  if jsonb_array_length(p_places) not between 1 and 3000 then raise exception 'Quantidade de localidades inválida.'; end if;
- insert into public.gp_tasks(job_id,key,cep,city,address)
- select p_id,v->>'key',v->>'cep',v->>'city',v->>'address' from jsonb_array_elements(p_places) v on conflict do nothing;
+ insert into public.gp_tasks(job_id,key,cep,city,address,number)
+ select p_id,v->>'key',v->>'cep',v->>'city',v->>'address',v->>'number' from jsonb_array_elements(p_places) v on conflict do nothing;
  update public.gp_jobs set status='queued',total=(select count(*) from public.gp_tasks where job_id=p_id) where id=p_id;
 end $$;
 
