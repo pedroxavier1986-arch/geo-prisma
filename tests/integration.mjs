@@ -9,14 +9,14 @@ async function call(action, body = {}, key=session) {
 }
 assert.equal((await call('history',{},'bad')).status,401);
 assert.equal((await call('worker')).status,401);
-const w=new ExcelJS.Workbook(); w.addWorksheet('Base').addRows([['name','cep','city','latitude','longitude'],['Exemplo técnico','01311100','São Paulo',null,null]]);
+const w=new ExcelJS.Workbook(); w.addWorksheet('Base').addRows([['name','address','cep','city','latitude','longitude'],['Exemplo técnico','Avenida Paulista, 1000','01311100','São Paulo',null,null]]);
 const bytes=await w.xlsx.writeBuffer();
 const {status,data:prepared}=await call('prepare',{filename:'teste-integracao.xlsx',bytes:bytes.length});
 assert.equal(status,200,JSON.stringify(prepared));
 const upload=await fetch(prepared.uploadUrl,{method:'PUT',headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},body:bytes});
 assert.equal(upload.ok,true,await upload.text());
 assert.equal((await call('status',{id:prepared.id},randomBytes(32).toString('hex'))).status,404);
-const start=await call('start',{id:prepared.id,places:[{cep:'01311100',city:'São Paulo'}]});
+const start=await call('start',{id:prepared.id,places:[{cep:'01311100',city:'São Paulo',address:'Avenida Paulista, 1000'}]});
 assert.equal(start.status,200,JSON.stringify(start.data));
 console.log('Upload, validação de sessão e início da fila: OK. Job:',prepared.id);
 for(let i=0;i<48;i++) {

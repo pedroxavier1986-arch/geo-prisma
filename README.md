@@ -11,7 +11,7 @@ Requer Node.js 20.9 ou superior. Execute `npm ci`, copie `.env.example` para `.e
 ## Entrada e saída
 
 - `.xlsx` de até 5 MB, até 20.000 linhas e até 3.000 localidades únicas, na aba `Base`.
-- Colunas `cep` (ou `postcode`), `city`, `latitude`, `longitude`.
+- Colunas `address` (ou `endereco`, `endereço`, `street` ou `logradouro`), `cep` (ou `postcode`), `city`, `latitude`, `longitude`.
 - Leitura, validação e montagem do Excel no navegador. O arquivo original fica no bucket privado; o resultado é reconstruído a partir das coordenadas persistidas ao baixar.
 - Coordenadas completas são preservadas; pares incompletos são substituídos integralmente quando há resultado.
 - O relatório registra pendências. Demais abas, valores e formatação comum são preservados pelo ExcelJS; recursos avançados de Excel, como gráficos e objetos incorporados, não têm garantia de fidelidade. Manter sempre o original.
@@ -31,7 +31,7 @@ Projeto `GeoPrisma`, região São Paulo, referência `zcmwhnpybnwirlwkoqbx`.
 
 ## Geocodificação
 
-O provedor inicial é Photon/OSM. Aceitamos somente resultados que confirmam país BR, CEP e cidade. Isso favorece precisão e pode deixar mais pendências que o script antigo. Cache por localidade por 30 dias, um worker global, intervalo de 1,2 segundo e até três tentativas em falhas temporárias.
+O provedor inicial é Photon/OSM. A busca usa `address + CEP + cidade`, sem consultar ou exigir endereço externo. Aceitamos resultados que confirmam país BR, cidade e correspondência suficiente do endereço; o CEP retornado é uma validação adicional quando o provedor o informa. Cache por endereço por 30 dias, um worker global, intervalo de 1,2 segundo e até três tentativas em falhas temporárias.
 
 O servidor público Photon não tem SLA e limita uso excessivo. Para maior volume, configurar `PHOTON_URL` no Supabase para uma instância contratada ou própria. Não incluímos o Nominatim público nem o ArcGIS sem licença de armazenamento como fallbacks automáticos. Dados OSM: https://www.openstreetmap.org/copyright.
 
